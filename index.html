@@ -180,23 +180,23 @@
             console.log("Dispatcher avviato.");
         }
 
-        // 2. Controllo nuovi Ticket via API 
+        // 2. Controllo nuovi Ticket via API (Senza Headers per eludere il CORS preflight)
         async function controllaNuoviTicket() {
             try {
-                // Cerchiamo i ticket in stato "Aperto"
                 const filterUrl = encodeURIComponent("stato='Aperto'");
-                const response = await fetch(`${API_BASE_URL}/model?database=${DATABASE_ID}&table=${TABLE_NOME}&filter=${filterUrl}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${TOKEN_NIOS4}` }
+                // Aggiungiamo il token direttamente nell'URL invece che negli headers
+                const urlCorsFriendly = `${API_BASE_URL}/model?database=${DATABASE_ID}&table=${TABLE_NOME}&filter=${filterUrl}&token=${TOKEN_NIOS4}`;
+
+                const response = await fetch(urlCorsFriendly, {
+                    method: 'GET'
+                    // RIMOSSI GLI HEADERS PER EVITARE IL BLOCCO CORS
                 });
 
                 const data = await response.json();
 
                 if (data.records && data.records.length > 0) {
-                    // Cerchiamo il primo ticket che NON è ancora stato notificato su questo PC
                     const ticketNuovo = data.records.find(t => !ticketGiaNotificati.includes(t.gguid));
 
-                    // Se c'è un ticket nuovo e non stiamo già mostrando un allarme
                     if (ticketNuovo && ticketCorrenteGguid === null) {
                         mostraAllarme(ticketNuovo);
                     }

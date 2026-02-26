@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A.M. Tecnology - Dispatcher Ticket</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2d;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        /* Schermata iniziale per sbloccare l'audio */
+        #start-screen {
+            text-align: center;
+        }
+
+        .btn-start {
+            background-color: #00a8ff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 168, 255, 0.4);
+            transition: 0.3s;
+        }
+
+        .btn-start:hover {
+            background-color: #0097e6;
+        }
+
+        /* Status di ascolto */
+        #listening-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .pulse {
+            width: 20px;
+            height: 20px;
+            background-color: #4cd137;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px #4cd137;
+            animation: pulsing 1.5s infinite;
+        }
+
+        @keyframes pulsing {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.7;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(0.9);
+                opacity: 0.7;
+            }
+        }
+
+        /* MODALE BLOCCANTE TICKET URGENTE */
+        #ticket-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(220, 20, 60, 0.95);
+            /* Rosso Allarme */
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #ticket-modal h1 {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        #ticket-modal h2 {
+            font-size: 30px;
+            font-weight: normal;
+            margin-bottom: 40px;
+        }
+
+        #countdown-box {
+            font-size: 80px;
+            font-weight: bold;
+            background: white;
+            color: #dc143c;
+            padding: 20px 40px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .btn-claim {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 25px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            transition: 0.2s;
+        }
+
+        .btn-claim:hover {
+            background-color: #2ecc71;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="start-screen">
+        <h2>Pannello Dispatcher A.M. Tecnology</h2>
+        <p>Premi il pulsante per attivare l'ascolto e sbloccare i suoni di allarme.</p>
+        <button class="btn-start" onclick="avviaDispatcher()">Avvia Ascolto Ticket</button>
+    </div>
+
+    <div id="listening-screen">
+        <div class="pulse"></div>
+        <h2>In ascolto per nuovi ticket...</h2>
+        <p>Non chiudere questa scheda. I popup appariranno automaticamente.</p>
+    </div>
+
+    <div id="ticket-modal">
+        <h1>🚨 NUOVA RICHIESTA ASSISTENZA 🚨</h1>
+        <h2 id="modal-ticket-title">Caricamento...</h2>
+        <div id="countdown-box">10</div>
+        <button class="btn-claim" onclick="prendiInCaricoAzione()">PRENDI IN CARICO</button>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURAZIONE API NIOS4 
+        // ==========================================
+        const API_BASE_URL = "https://web.nios4.com/ws";
+        const TOKEN_NIOS4 = "e9b5ddc844acd1456416971d3145e2ca";
+        const DATABASE_ID = "dtec3701";
+        const TABLE_NOME = "ticket";
+        const NOME_OPERATORE = "57684";
+        const AUDIO_URL = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+
+        // Variabili di stato
+        let pollingInterval;
+        let countdownInterval;
+        let ticketCorrenteGguid = null;
+        const allarmeAudio = new Audio(AUDIO_URL);
+        allarmeAudio.loop = true;
+
+        // 1. Inizializzazione
+        function avviaDispatcher() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('listening-screen').style.display = 'block';
+
+            // Sblocca le policy audio del browser
+            allarmeAudio.play().then(() => { allarmeAudio.pause(); }).catch(e => console.log(e));
+
+            // Inizia il polling ogni 3 secondi
+            pollingInterval = setInterval(controllaNuoviTicket, 3000);
+            console.log("Dispatcher avviato.");
+        }
+
+        // 2. Controllo nuovi Ticket via API 
+        async function controllaNuoviTicket() {
+            try {
+                // NOTA: Se su D-TEC lo stato ha un nome diverso, cambialo qui (es. 'Aperto', 'In attesa')
+                const filterUrl = encodeURIComponent("stato='Aperto'");
+                const response = await fetch(`${API_BASE_URL}/model?database=${DATABASE_ID}&table=${TABLE_NOME}&filter=${filterUrl}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${TOKEN_NIOS4}` }
+                });
+
+                const data = await response.json();
+
+                if (data.records && data.records.length > 0) {
+                    const ticketTrovato = data.records[0];
+
+                    if (ticketCorrenteGguid !== ticketTrovato.gguid) {
+                        mostraAllarme(ticketTrovato);
+                    }
+                } else {
+                    // Chiude il modale se il ticket non c'è più (es. preso da un collega o da noi stessi)
+                    if (ticketCorrenteGguid !== null) {
+                        chiudiModale("Il ticket è stato processato o preso in carico!");
+                    }
+                }
+            } catch (error) {
+                console.error("Errore di connessione a Nios4:", error);
+            }
+        }
+
+        // 3. Mostra il Modale
+        function mostraAllarme(ticket) {
+            ticketCorrenteGguid = ticket.gguid;
+
+            // Suona! (Catturiamo l'eccezione in caso di problemi col browser)
+            allarmeAudio.play().catch(e => console.error("Audio bloccato:", e));
+
+            // Usa i campi reali di D-TEC per mostrare l'avviso
+            const nomeCliente = ticket.cliente || "Sconosciuto";
+            const idTicket = ticket.id_ticket || "---";
+            document.getElementById('modal-ticket-title').innerText = `Ticket #${idTicket} - Cliente: ${nomeCliente}`;
+            document.getElementById('ticket-modal').style.display = 'flex';
+
+            let secondiRimasti = 10;
+            document.getElementById('countdown-box').innerText = secondiRimasti;
+
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                secondiRimasti--;
+                document.getElementById('countdown-box').innerText = secondiRimasti;
+
+                if (secondiRimasti <= 0) {
+                    prendiInCaricoAzione();
+                }
+            }, 1000);
+        }
+
+        // 4. Azione "Prendi in Carico"
+        async function prendiInCaricoAzione() {
+            clearInterval(countdownInterval);
+            allarmeAudio.pause();
+            allarmeAudio.currentTime = 0;
+            document.getElementById('ticket-modal').style.display = 'none';
+
+            // Payload corretto per D-TEC
+            const payload = {
+                database: DATABASE_ID,
+                table: TABLE_NOME,
+                data: [{
+                    gguid: ticketCorrenteGguid,
+                    stato: "In Lavorazione", // <-- Verifica che questo stato esista nel tuo D-TEC
+                    tecnico: NOME_OPERATORE  // <-- Corretto da "operatore" a "tecnico"
+                }]
+            };
+
+            try {
+                // Salva il record
+                await fetch(`${API_BASE_URL}/table_save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN_NIOS4}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Forza il Sync su Nios4
+                await fetch(`${API_BASE_URL}/sync?database=${DATABASE_ID}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${TOKEN_NIOS4}` }
+                });
+
+                // Apri la scheda (Usa il gguid per aprire il record corretto)
+                window.open(`https://web.dtec.one/scheda/${ticketCorrenteGguid}`, '_blank');
+
+                // NON azzeriamo ticketCorrenteGguid qui, lo farà chiudiModale() al prossimo ciclo pulito
+
+            } catch (error) {
+                alert("Errore durante la presa in carico. Riprova.");
+                console.error(error);
+                ticketCorrenteGguid = null;
+            }
+        }
+
+        // 5. Funzione di utilità per reset e spegnimento
+        function chiudiModale(messaggio) {
+            clearInterval(countdownInterval);
+            allarmeAudio.pause();
+            allarmeAudio.currentTime = 0;
+            document.getElementById('ticket-modal').style.display = 'none';
+            ticketCorrenteGguid = null;
+            console.log(messaggio);
+        }
+    </script>
+</body>
+
+</html>

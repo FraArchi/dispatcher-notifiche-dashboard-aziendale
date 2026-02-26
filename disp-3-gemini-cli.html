@@ -1,0 +1,609 @@
+1
+<!DOCTYPE html>
+2 <html lang="it">
+3
+
+<head>
+    4
+    <meta charset="UTF-8">
+    5
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    6 <title>D-TEC DISPATCHER | AMTECNOLOGY</title>
+    7 <style>
+        8
+
+        /* --- DESIGN SYSTEM (Industrial/Control Room) --- */
+        9 :root {
+            10 --bg-dark: #0a0a0a;
+            11 --bg-card: #141414;
+            12 --text-main: #e0e0e0;
+            13 --text-dim: #888888;
+            14 --accent: #ff9800;
+            /* Arancione industriale */
+            15 --status-ok: #00ff41;
+            /* Verde fosforescente Matrix */
+            16 --status-err: #ff0000;
+            17 --alert-red: #cc0000;
+            18 --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            19 --font-sans: 'Roboto Condensed', 'Inter', sans-serif;
+            20
+        }
+
+        21 22 * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        23 24 body {
+            25 background-color: var(--bg-dark);
+            26 color: var(--text-main);
+            27 font-family: var(--font-sans);
+            28 height: 100vh;
+            29 overflow: hidden;
+            30 display: flex;
+            31 flex-direction: column;
+            32
+        }
+
+        33 34
+
+        /* --- LAYOUT STANDBY --- */
+        35 #standby-view {
+            36 display: flex;
+            37 flex-direction: column;
+            38 height: 100%;
+            39 padding: 20px;
+            40 transition: opacity 0.5s ease;
+            41
+        }
+
+        42 43 header {
+            44 display: flex;
+            45 justify-content: space-between;
+            46 align-items: center;
+            47 border-bottom: 2px solid #333;
+            48 padding-bottom: 15px;
+            49 margin-bottom: 20px;
+            50
+        }
+
+        51 52 .system-title {
+            53 font-size: 1.5rem;
+            54 font-weight: 800;
+            55 letter-spacing: 2px;
+            56 color: var(--accent);
+            57 text-transform: uppercase;
+            58
+        }
+
+        59 60 .status-panel {
+            61 display: flex;
+            62 gap: 20px;
+            63 align-items: center;
+            64
+        }
+
+        65 66 .indicator {
+            67 display: flex;
+            68 align-items: center;
+            69 gap: 8px;
+            70 font-family: var(--font-mono);
+            71 font-size: 0.8rem;
+            72
+        }
+
+        73 74 .dot {
+            75 width: 10px;
+            76 height: 10px;
+            77 border-radius: 50%;
+            78 background-color: var(--text-dim);
+            79
+        }
+
+        80 81 .dot.active {
+            82 background-color: var(--status-ok);
+            83 box-shadow: 0 0 10px var(--status-ok);
+            84 animation: pulse 1s infinite;
+            85
+        }
+
+        86 87 .dot.error {
+            background-color: var(--status-err);
+            box-shadow: 0 0 10px var(--status-err);
+        }
+
+        88 89 @keyframes pulse {
+            90 0% {
+                opacity: 1;
+            }
+
+            91 50% {
+                opacity: 0.4;
+            }
+
+            92 100% {
+                opacity: 1;
+            }
+
+            93
+        }
+
+        94 95 .log-container {
+            96 flex-grow: 1;
+            97 background: var(--bg-card);
+            98 border: 1px solid #333;
+            99 border-radius: 4px;
+            100 padding: 15px;
+            101 overflow-y: auto;
+            102 font-family: var(--font-mono);
+            103
+        }
+
+        104 105 .log-entry {
+            106 font-size: 0.85rem;
+            107 padding: 5px 0;
+            108 border-bottom: 1px solid #222;
+            109 color: var(--text-dim);
+            110
+        }
+
+        111 112 .log-entry.success {
+            color: var(--status-ok);
+        }
+
+        113 .log-entry.info {
+            color: var(--accent);
+        }
+
+        114 115
+
+        /* --- LAYOUT ALLERTA (BANNER ROSSO) --- */
+        116 #alert-view {
+            117 position: fixed;
+            118 top: 0;
+            119 left: 0;
+            120 width: 100%;
+            121 height: 100%;
+            122 background-color: var(--alert-red);
+            123 display: none;
+            /* Hidden by default */
+            124 flex-direction: column;
+            125 justify-content: center;
+            126 align-items: center;
+            127 z-index: 9999;
+            128 text-align: center;
+            129 padding: 40px;
+            130 animation: flashBackground 1s infinite alternate;
+            131
+        }
+
+        132 133 @keyframes flashBackground {
+            134 from {
+                background-color: #990000;
+            }
+
+            135 to {
+                background-color: #ff0000;
+            }
+
+            136
+        }
+
+        137 138 .alert-content {
+            139 max-width: 900px;
+            140 width: 100%;
+            141
+        }
+
+        142 143 .alert-title {
+            144 font-size: 5rem;
+            145 font-weight: 900;
+            146 text-transform: uppercase;
+            147 margin-bottom: 10px;
+            148 line-height: 1;
+            149 text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+            150
+        }
+
+        151 152 .ticket-info {
+            153 background: rgba(0, 0, 0, 0.4);
+            154 padding: 30px;
+            155 border-radius: 8px;
+            156 margin: 20px 0;
+            157 border: 2px solid white;
+            158
+        }
+
+        159 160 .customer-name {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        161 .ticket-desc {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        162 .ticket-meta {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            color: #ffcc00;
+        }
+
+        163 164 .btn-take {
+            165 background: white;
+            166 color: var(--alert-red);
+            167 border: none;
+            168 padding: 20px 50px;
+            169 font-size: 2rem;
+            170 font-weight: 900;
+            171 text-transform: uppercase;
+            172 cursor: pointer;
+            173 border-radius: 50px;
+            174 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            175 transition: transform 0.2s, background 0.2s;
+            176
+        }
+
+        177 178 .btn-take:hover {
+            transform: scale(1.05);
+            background: #eee;
+        }
+
+        179 180 .countdown-container {
+            181 margin-top: 30px;
+            182 width: 100%;
+            183 height: 10px;
+            184 background: rgba(255, 255, 255, 0.2);
+            185 border-radius: 5px;
+            186 overflow: hidden;
+            187
+        }
+
+        188 189 #countdown-bar {
+            190 height: 100%;
+            191 background: white;
+            192 width: 100%;
+            193 transition: width 1s linear;
+            194
+        }
+
+        195 196
+
+        /* Bottone Test Audio */
+        197 .btn-test {
+            198 background: transparent;
+            199 border: 1px solid var(--accent);
+            200 color: var(--accent);
+            201 padding: 5px 15px;
+            202 cursor: pointer;
+            203 font-size: 0.7rem;
+            204 text-transform: uppercase;
+            205
+        }
+
+        206 207 .btn-test:hover {
+            background: var(--accent);
+            color: black;
+        }
+
+        208
+    </style>
+    209
+</head>
+210
+
+<body>
+    211
+    212 <!-- VISTA STANDBY -->
+    213 <div id="standby-view">
+        214 <header>
+            215 <div class="system-title">Dispatcher v2.0 // AMTECNOLOGY</div>
+            216 <div class="status-panel">
+                217 <button class="btn-test" onclick="audioManager.testSound()">Test Audio</button>
+                218 <div class="indicator">
+                    219 <div id="status-dot" class="dot"></div>
+                    220 <span id="status-text">DISCONNECTED</span>
+                    221 </div>
+                222 <div class="indicator">
+                    223 <span>POLL:</span>
+                    224 <span id="last-poll-time" style="font-family: var(--font-mono);">--:--:--</span>
+                    225 </div>
+                226 </div>
+            227 </header>
+        228
+        229 <div style="margin-bottom: 10px; font-weight: bold; color: var(--accent);">LOG ATTIVITÀ SESSIONE</div>
+        230 <div id="log" class="log-container">
+            231 <div class="log-entry">Inizializzazione sistema... Attendere interazione utente per audio.</div>
+            232 </div>
+        233 </div>
+    234
+    235 <!-- VISTA ALLERTA -->
+    236 <div id="alert-view">
+        237 <div class="alert-content">
+            238 <div class="alert-title">Nuovo Ticket!</div>
+            239 <div class="ticket-info">
+                240 <div id="alert-customer" class="customer-name">CLIENTE ESEMPIO SRL</div>
+                241 <div id="alert-desc" class="ticket-desc">Descrizione problematica del ticket...</div>
+                242 <div id="alert-meta" class="ticket-meta">ID: [GGUID] | ORE: 14:30</div>
+                243 </div>
+            244
+            245 <button class="btn-take" id="take-charge-btn">Prendi in Carico</button>
+            246
+            247 <div class="countdown-container">
+                248 <div id="countdown-bar"></div>
+                249 </div>
+            250 </div>
+        251 </div>
+    252
+    253
+    <script>
+        254         /*
+   255            ================================================================
+   256            CONFIGURAZIONE CENTRALIZZATA
+   257            Personalizzare questi parametri per l'ambiente di produzione.
+   258            ================================================================
+   259         */
+        260         const CONFIG = {
+            261             POLLING_INTERVAL_MS: 10000,         // Frequenza controllo (default 10s)
+            262
+   263             // API NIOS4
+   264             NIOS4_ENDPOINT: 'https://api.nios4.com/v1/tickets', // Esempio URL
+            265             NIOS4_AUTH_HEADER: 'Bearer IL_TUO_TOKEN_QUI',       // Inserire token reale
+            266
+   267             // FILTRI API
+   268             FILTER_PARAMS: {
+                269                 status: 'aperto',
+                270                 assignee: 'unassigned'
+   271             },
+        272
+        273             // DATI TECNICO (Per l'aggiornamento "Prendi in Carico")
+        274             TECNICO_ID: 'TEK_01',
+            275             TECNICO_NOME: 'Mario Rossi',
+                276
+        277             // URL D-TEC
+        278             DTEC_BASE_URL: 'https://web.dtec.one/scheda/'
+        279         };
+        280
+        281         /*
+   282            --- GESTIONE STATO ---
+   283         */
+        284         let notifiedGguids = new Set();
+        285         let currentActiveTicket = null;
+        286         let countdownValue = 10;
+        287         let countdownTimer = null;
+        288
+        289         /*
+   290            --- WEB AUDIO API (Generazione Beep) ---
+   291         */
+        292         const audioManager = {
+            293             ctx: null,
+            294             osc: null,
+            295             init() {
+                296                 if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        297             },
+        298             playAlert() {
+            299                 this.init();
+            300                 if (this.ctx.state === 'suspended') this.ctx.resume();
+            301
+            302                 const playBeep = (freq, time) => {
+                303                     const osc = this.ctx.createOscillator();
+                304                     const gain = this.ctx.createGain();
+                305                     osc.type = 'square';
+                306                     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                307                     gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                308                     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+                309                     osc.connect(gain);
+                310                     gain.connect(this.ctx.destination);
+                311                     osc.start();
+                312                     osc.stop(this.ctx.currentTime + 0.2);
+                313
+            };
+            314
+            315                 // Tre beep rapidi
+            316                 playBeep(880, 0);
+            317                 setTimeout(() => playBeep(880, 0), 200);
+            318                 setTimeout(() => playBeep(1760, 0), 400);
+            319
+        },
+        320             testSound() {
+            321                 this.playAlert();
+            322                 addLog("Test audio eseguito.", "info");
+            323
+        }
+        324         };
+        325
+        326         /*
+   327            --- LOGICA DI POLLING ---
+   328         */
+        329         async function pollNios4() {
+            330             const statusDot = document.getElementById('status-dot');
+            331             const statusText = document.getElementById('status-text');
+            332             const lastPollSpan = document.getElementById('last-poll-time');
+            333
+            334             lastPollSpan.innerText = new Date().toLocaleTimeString();
+            335
+            336             try {
+                337                 /*
+   338                    NOTA: In ambiente reale, questa chiamata potrebbe fallire per CORS
+   339                    se Nios4 non permette il dominio della pagina. In tal caso,
+   340                    va usato un proxy o configurata l'API.
+   341                 */
+                342                 /* ESEMPIO CHIAMATA REALE:
+   343                 const response = await fetch(`${CONFIG.NIOS4_ENDPOINT}?${new URLSearchParams(CONFIG.FILTER_PARAMS)}`, {
+   344                     headers: { 'Authorization': CONFIG.NIOS4_AUTH_HEADER }
+   345                 });
+   346                 const tickets = await response.json();
+   347                 */
+                348
+                349                 // SIMULAZIONE PER DEMO (Rimuovere e decommentare sopra per prod)
+                350                 const mockTickets = Math.random() > 0.8 ? [{
+                    351                     gguid: 'TKT-' + Math.floor(Math.random() * 10000),
+                    352                     cliente: 'Azienda Cliente SpA',
+                    353                     oggetto: 'Intervento urgente su server ' + Math.floor(Math.random() * 100),
+                    354                     timestamp: new Date().toLocaleTimeString()
+   355                 }] : [];
+                356
+                357                 statusDot.className = 'dot active';
+                358                 statusText.innerText = 'ONLINE / POLLING';
+                359
+                360                 // Verifica nuovi ticket
+                361                 mockTickets.forEach(ticket => {
+                    362                     if (!notifiedGguids.has(ticket.gguid)) {
+                        363                         triggerAlert(ticket);
+                        364
+                    }
+                    365
+                });
+                366
+                367
+            } catch (err) {
+                368                 console.error("Polling Error:", err);
+                369                 statusDot.className = 'dot error';
+                370                 statusText.innerText = 'ERROR / OFFLINE';
+                371                 addLog("Errore connessione API: " + err.message, "error");
+                372
+            }
+            373
+        }
+        374
+        375         /*
+   376            --- LOGICA ALLERTA ---
+   377         */
+        378         function triggerAlert(ticket) {
+            379             currentActiveTicket = ticket;
+            380             notifiedGguids.add(ticket.gguid);
+            381
+            382             // Aggiorna UI Allerta
+            383             document.getElementById('alert-customer').innerText = ticket.cliente;
+            384             document.getElementById('alert-desc').innerText = ticket.oggetto;
+            385             document.getElementById('alert-meta').innerText = `GGUID: ${ticket.gguid} | RICEVUTO: ${ticket.timestamp}`;
+            386
+            387             // Mostra Banner
+            388             document.getElementById('alert-view').style.display = 'flex';
+            389             document.getElementById('standby-view').style.opacity = '0';
+            390
+            391             // Audio Loop
+            392             const audioInterval = setInterval(() => {
+                393                 if (!currentActiveTicket) clearInterval(audioInterval);
+                394                 else audioManager.playAlert();
+                395
+            }, 2000);
+            396             audioManager.playAlert();
+            397
+            398             // Countdown Visivo
+            399             startCountdown();
+            400
+            401             addLog(`NOTIFICA: Nuovo ticket ${ticket.gguid} rilevato!`, "info");
+            402
+        }
+        403
+        404         function startCountdown() {
+            405             countdownValue = 10;
+            406             const bar = document.getElementById('countdown-bar');
+            407             bar.style.width = '100%';
+            408
+            409             if (countdownTimer) clearInterval(countdownTimer);
+            410
+            411             countdownTimer = setInterval(() => {
+                412                 countdownValue--;
+                413                 bar.style.width = (countdownValue * 10) + '%';
+                414                 if (countdownValue <= 0) {
+                    415                     // Il countdown non chiude, serve solo come urgenza
+                    416                     bar.style.backgroundColor = '#ffcc00';
+                    417
+                }
+                418
+            }, 1000);
+            419
+        }
+        420
+        421         /*
+   422            --- AZIONE PRENDI IN CARICO ---
+   423         */
+        424         document.getElementById('take-charge-btn').addEventListener('click', async () => {
+            425             if (!currentActiveTicket) return;
+            426
+            427             const tkt = currentActiveTicket;
+            428             addLog(`Presa in carico ticket ${tkt.gguid}...`, "success");
+            429
+            430             try {
+                431                 /*
+   432                    UPDATE API NIOS4:
+   433                    Aggiorna lo stato del ticket e assegnalo al tecnico.
+   434                 */
+                435                 /* ESEMPIO:
+   436                 await fetch(`${CONFIG.NIOS4_ENDPOINT}/${tkt.gguid}`, {
+   437                     method: 'PATCH',
+   438                     headers: {
+   439                         'Authorization': CONFIG.NIOS4_AUTH_HEADER,
+   440                         'Content-Type': 'application/json'
+   441                     },
+   442                     body: JSON.stringify({
+   443                         stato: 'in_lavorazione',
+   444                         tecnico_assegnato: CONFIG.TECNICO_ID
+   445                     })
+   446                 });
+   447                 */
+                448
+                449                 // Apri D-TEC in nuova tab
+                450                 window.open(CONFIG.DTEC_BASE_URL + tkt.gguid, '_blank');
+                451
+                452                 // Reset Stato
+                453                 resetAlert();
+                454
+                455
+            } catch (err) {
+                456                 alert("Errore nell'aggiornamento del ticket. Controllare connessione.");
+                457
+            }
+            458
+        });
+        459
+        460         function resetAlert() {
+            461             currentActiveTicket = null;
+            462             document.getElementById('alert-view').style.display = 'none';
+            463             document.getElementById('standby-view').style.opacity = '1';
+            464             if (countdownTimer) clearInterval(countdownTimer);
+            465
+        }
+        466
+        467         /*
+   468            --- UTILITY ---
+   469         */
+        470         function addLog(msg, type = "") {
+            471             const log = document.getElementById('log');
+            472             const entry = document.createElement('div');
+            473             entry.className = 'log-entry ' + type;
+            474             entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            475             log.prepend(entry);
+            476
+            477             // Mantieni solo ultimi 50 log
+            478             if (log.childNodes.length > 50) log.lastChild.remove();
+            479
+        }
+        480
+        481         // INIT
+        482         window.addEventListener('load', () => {
+            483             addLog("Sistema pronto. Cliccare ovunque per attivare l'audio.");
+            484
+            485             // Il browser richiede interazione per l'audio
+            486             document.body.addEventListener('click', () => {
+                487                 audioManager.init();
+                488
+            }, { once: true });
+            489
+            490             // Start Polling
+            491             pollNios4();
+            492             setInterval(pollNios4, CONFIG.POLLING_INTERVAL_MS);
+            493
+        });
+        494     </script>
+    495
+</body>
+496
+
+</html>

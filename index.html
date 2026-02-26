@@ -183,14 +183,8 @@
         // 2. Controllo nuovi Ticket via API (Senza Headers per eludere il CORS preflight)
         async function controllaNuoviTicket() {
             try {
-                const filterUrl = encodeURIComponent("stato='Aperto'");
-                // Aggiungiamo il token direttamente nell'URL invece che negli headers
-                const urlCorsFriendly = `${API_BASE_URL}/model?database=${DATABASE_ID}&table=${TABLE_NOME}&filter=${filterUrl}&token=${TOKEN_NIOS4}`;
 
-                const response = await fetch(urlCorsFriendly, {
-                    method: 'GET'
-                    // RIMOSSI GLI HEADERS PER EVITARE IL BLOCCO CORS
-                });
+                const response = await fetch(`http://localhost:3000/api/ticket`);
 
                 const data = await response.json();
 

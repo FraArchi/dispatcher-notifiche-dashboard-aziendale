@@ -183,20 +183,24 @@
         // 2. Controllo nuovi Ticket via API (Senza Headers per eludere il CORS preflight)
         async function controllaNuoviTicket() {
             try {
-
                 const response = await fetch(`http://localhost:3000/api/ticket`);
-
                 const data = await response.json();
+                
+                console.log("Risposta API:", JSON.stringify(data)); // <-- LOG CHIAVE
 
-                if (data.records && data.records.length > 0) {
-                    const ticketNuovo = data.records.find(t => !ticketGiaNotificati.includes(t.gguid));
+                // Gestisci sia { records: [] } che array diretto []
+                const lista = data.records || data || [];
+
+                if (lista.length > 0) {
+                    const ticketNuovo = lista.find(t => !ticketGiaNotificati.includes(t.gguid));
+                    console.log("Ticket nuovo trovato:", ticketNuovo); // <-- LOG CHIAVE
 
                     if (ticketNuovo && ticketCorrenteGguid === null) {
                         mostraAllarme(ticketNuovo);
                     }
                 }
             } catch (error) {
-                console.error("Errore di connessione a Nios4:", error);
+                console.error("Errore di connessione:", error);
             }
         }
 

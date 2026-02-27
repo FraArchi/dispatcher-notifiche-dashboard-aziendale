@@ -76,12 +76,12 @@ app.post('/webhook/new-ticket', (req, res) => {
     
     // Mappatura payload Nios4 -> Formato Interno
     const ticketData = {
-        id: niosPayload.id_referenza || niosPayload.id || 'N/D',
+        id_referenza: niosPayload.id_referenza || niosPayload.id || 'N/D',
         cliente: niosPayload.cliente || 'Cliente Sconosciuto',
         oggetto: niosPayload.oggetto || 'Nessun oggetto',
         gguid: niosPayload.gguid,
         status: niosPayload.stato || 'Aperto',
-        timestamp: new Date().toISOString()
+        data_apertura: niosPayload.data_apertura || new Date().toISOString()
     };
 
     if (ticketData.gguid) {
@@ -110,12 +110,12 @@ async function runPolling() {
                     newTicketsFound++;
 
                     const ticketData = {
-                        id: record.id_referenza || record.id || 'N/D',
+                        id_referenza: record.id_referenza || record.id || 'N/D',
                         cliente: record.cliente || 'Cliente Sconosciuto',
                         oggetto: record.oggetto || 'Nessun oggetto',
                         gguid: record.gguid,
                         status: record.stato || 'Aperto',
-                        timestamp: new Date().toISOString()
+                        data_apertura: record.data_apertura || new Date().toISOString()
                     };
 
                     console.log(`[Polling] Nuovo ticket trovato: ${ticketData.gguid}`);

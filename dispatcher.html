@@ -606,7 +606,7 @@
             // ---> AMBIENTE DI TEST
             // true  = Simula chiamate di rete ritornando ticket finti. (Per visualizzare senza API pronte)
             // false = Effettua reai "fetch" verso l'infrastruttura specificata su API_URL_*
-            MOCK_MODE: true
+            MOCK_MODE: false
         };
 
         // Generazione automatica dell'header Basic Auth se le credenziali sono fornite
@@ -967,15 +967,7 @@
 
             state.socket.on('new-ticket', (ticket) => {
                 console.log('[Socket.io] Ricevuto nuovo ticket:', ticket);
-                // Mappa i dati del webhook nel formato atteso dalla UI
-                const mappedTicket = {
-                    gguid: ticket.gguid || ticket.id || Date.now(),
-                    id_referenza: ticket.id_referenza || ticket.codice || 'N/A',
-                    cliente: ticket.cliente || 'Nuovo Cliente',
-                    oggetto: ticket.oggetto || 'Nuovo Ticket',
-                    data_apertura: ticket.data_apertura || new Date().toLocaleTimeString()
-                };
-                triggerAlertSequence(mappedTicket);
+                triggerAlertSequence(ticket);
             });
 
             state.socket.on('ticket-remote-ack', (data) => {

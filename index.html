@@ -4,254 +4,1034 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A.M. Tecnology - Dispatcher Ticket</title>
+    <title>D-TEC Dispatcher | System Control</title>
+    <!-- Opzionale: Google Fonts per un look più moderno, fallback sui font di sistema garantiti -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e1e2d;
-            color: white;
+        /* =========================================================================
+           CSS VARIABLES & GLOBAL RESET
+           ========================================================================= */
+        :root {
+            --bg-color: #0b1014;
+            --panel-bg: #141c24;
+            --border-color: #2b3643;
+            --text-main: #dfebf6;
+            --text-muted: #798d9f;
+            --accent-green: #00ff88;
+            --accent-orange: #ff9900;
+            --alert-red: #ff003c;
+            --alert-red-glow: rgba(255, 0, 60, 0.5);
+            --alert-dark: #2a000a;
+
+            --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            --font-sans: 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
+            --font-base: system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-base);
+            height: 100dvh;
+            overflow: hidden;
+            /* No scroll, dashboard fissa */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =========================================================================
+           BOOT SCREEN (Audio Unlock)
+           ========================================================================= */
+        #boot-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            text-align: center;
+        }
+
+        #boot-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .boot-logo {
+            font-family: var(--font-sans);
+            font-size: 4rem;
+            letter-spacing: 5px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .boot-logo span {
+            color: var(--accent-orange);
+        }
+
+        .btn-boot {
+            background: transparent;
+            color: var(--accent-green);
+            border: 2px solid var(--accent-green);
+            padding: 1rem 3rem;
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 0 15px var(--accent-green);
+            transition: all 0.3s;
+        }
+
+        .btn-boot:hover {
+            background: var(--accent-green);
+            color: var(--bg-color);
+            box-shadow: 0 0 30px var(--accent-green);
+        }
+
+        /* =========================================================================
+           LAYOUT UTILS
+           ========================================================================= */
+        .hidden {
+            display: none !important;
+        }
+
+        /* =========================================================================
+           STANDBY VIEW (Control Room)
+           ========================================================================= */
+        #standby-view {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            transition: opacity 0.3s ease;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .brand {
+            font-family: var(--font-sans);
+            font-size: 2.5rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .brand span {
+            color: var(--accent-orange);
+        }
+
+        .status-panel {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            box-shadow: 0 0 4px var(--text-muted);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .pulse-dot.polling {
+            animation: pulse-green 1s infinite alternate;
+        }
+
+        .pulse-dot.error {
+            background-color: var(--alert-red);
+            box-shadow: 0 0 10px var(--alert-red);
+            animation: pulse-red 1s infinite alternate;
+        }
+
+        @keyframes pulse-green {
+            from {
+                background-color: #00552b;
+                box-shadow: 0 0 2px #00552b;
+            }
+
+            to {
+                background-color: var(--accent-green);
+                box-shadow: 0 0 12px var(--accent-green);
+            }
+        }
+
+        @keyframes pulse-red {
+            from {
+                opacity: 0.5;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            border-color: var(--text-main);
+            background: #1c2631;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .log-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .log-header {
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-sans);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .log-item {
+            display: grid;
+            grid-template-columns: 120px 180px 1fr 150px;
+            gap: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            align-items: center;
+        }
+
+        .log-item:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .log-item .time {
+            color: var(--text-muted);
+        }
+
+        .log-item .id {
+            color: var(--accent-orange);
+            font-weight: bold;
+        }
+
+        .log-item .desc {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .log-item .link {
+            color: var(--bg-color);
+            background: var(--accent-green);
+            text-decoration: none;
+            text-align: center;
+            padding: 0.3rem 0.5rem;
+            border-radius: 3px;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .log-item .link:hover {
+            opacity: 0.8;
+        }
+
+        /* Error Notification in Standby */
+        #error-banner {
+            background-color: var(--alert-red);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            display: none;
+            /* hidden by default */
+            border-radius: 4px;
+            border-left: 4px solid #ffcccc;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* =========================================================================
+           ALERT VIEW (Red Banner)
+           ========================================================================= */
+        #alert-view {
+            position: fixed;
+            inset: 0;
+            height: 100dvh;
+            background-color: var(--alert-dark);
+            background-image: 
+                radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255, 0, 60, 0.05) 40px, rgba(255, 0, 60, 0.05) 80px);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 2rem;
+        }
+
+        #alert-view.active {
+            opacity: 1;
+            pointer-events: all;
+            animation: alert-pulse-bg 2s infinite ease-in-out;
+        }
+
+        @keyframes alert-pulse-bg {
+            0% { background-color: var(--alert-dark); }
+            50% { background-color: #450010; }
+            100% { background-color: var(--alert-dark); }
+        }
+
+        .alert-container {
+            background: rgba(0, 0, 0, 0.9);
+            padding: clamp(1rem, 5vw, 4rem);
+            border-radius: 4px;
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.9), 0 0 20px var(--alert-red-glow);
+            border: 2px solid var(--alert-red);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-container::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: var(--alert-red);
+            box-shadow: 0 0 15px var(--alert-red);
+        }
+
+        .alert-header {
+            font-family: var(--font-sans);
+            font-size: clamp(2rem, 8vw, 5rem);
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            margin-bottom: 2rem;
+            color: var(--alert-red);
+            text-shadow: 0 0 30px var(--alert-red-glow);
+            animation: alert-text-flicker 1.5s infinite;
+        }
+
+        @keyframes alert-text-flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            52% { opacity: 1; }
+        }
+
+        .ticket-details {
+            font-family: var(--font-mono);
+            text-align: left;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: rgba(255, 0, 60, 0.05);
+            border-left: 4px solid var(--alert-red);
+            font-size: clamp(1rem, 2.5vw, 1.6rem);
+            line-height: 1.6;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem 2rem;
+        }
+
+        .ticket-details strong {
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .action-area {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
+            gap: 2rem;
+            margin-top: 2rem;
         }
 
-        #start-screen {
-            text-align: center;
-        }
-
-        .btn-start {
-            background-color: #00a8ff;
+        .btn-take {
+            background: var(--alert-red);
             color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 168, 255, 0.4);
-            transition: 0.3s;
-        }
-
-        .btn-start:hover {
-            background-color: #0097e6;
-        }
-
-        #listening-screen {
-            display: none;
-            text-align: center;
-        }
-
-        .pulse {
-            width: 20px;
-            height: 20px;
-            background-color: #4cd137;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 10px #4cd137;
-            animation: pulsing 1.5s infinite;
-        }
-
-        @keyframes pulsing {
-            0% {
-                transform: scale(0.9);
-                opacity: 0.7;
-            }
-
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(0.9);
-                opacity: 0.7;
-            }
-        }
-
-        /* MODALE BLOCCANTE TICKET URGENTE */
-        #ticket-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(220, 20, 60, 0.95);
-            z-index: 9999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        #ticket-modal h1 {
-            font-size: 50px;
-            margin-bottom: 10px;
-        }
-
-        #ticket-modal h2 {
-            font-size: 30px;
-            font-weight: normal;
-            margin-bottom: 40px;
-        }
-
-        #countdown-box {
-            font-size: 80px;
+            padding: 1.5rem 4rem;
+            font-family: var(--font-sans);
+            font-size: clamp(1.5rem, 5vw, 3rem);
+            text-transform: uppercase;
             font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px var(--alert-red-glow);
+            letter-spacing: 2px;
+        }
+
+        .btn-take:hover {
             background: white;
-            color: #dc143c;
-            padding: 20px 40px;
-            border-radius: 15px;
-            margin-bottom: 40px;
-        }
-
-        .btn-claim {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 20px 50px;
-            font-size: 25px;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-            transition: 0.2s;
-        }
-
-        .btn-claim:hover {
-            background-color: #2ecc71;
+            color: var(--alert-red);
+            box-shadow: 0 0 40px white;
             transform: scale(1.05);
+        }
+
+        .btn-take:active {
+            transform: scale(0.95);
+        }
+
+        /* Countdown Visual */
+        .countdown-wrapper {
+            position: relative;
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .countdown-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--alert-red);
+            box-shadow: 0 0 10px var(--alert-red);
+            transform-origin: left;
+            /* Will be animated via WAAPI */
         }
     </style>
 </head>
 
 <body>
 
-    <div id="start-screen">
-        <h2>Pannello Dispatcher A.M. Tecnology</h2>
-        <p>Premi il pulsante per attivare l'ascolto e sbloccare i suoni di allarme.</p>
-        <button class="btn-start" onclick="avviaDispatcher()">Avvia Ascolto Ticket</button>
+    <!-- BOOT SCREEN -->
+    <div id="boot-screen">
+        <div class="boot-logo">D-TEC <span>Dispatcher</span></div>
+        <button class="btn-boot" id="btn-boot">Initialize System</button>
+        <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.9rem;">
+            Awaiting user interaction to unlock audio engine...
+        </div>
     </div>
 
-    <div id="listening-screen">
-        <div class="pulse"></div>
-        <h2>In ascolto per nuovi ticket...</h2>
-        <p>Non chiudere questa scheda. I popup appariranno automaticamente.</p>
-    </div>
+    <!-- STANDBY VIEW -->
+    <main id="standby-view">
+        <header>
+            <div class="brand">D-TEC <span>Dispatcher</span></div>
+            <div class="status-panel">
+                <div class="status-indicator" id="conn-status">
+                    <div class="pulse-dot" id="polling-dot"></div>
+                    <span id="conn-text">API In Attesa...</span>
+                </div>
+                <div class="status-indicator">
+                    <span style="color:var(--text-muted)">Ultimo poll:</span>
+                    <span id="last-poll-time" style="color:var(--text-main)">--:--:--</span>
+                </div>
+                <div class="controls">
+                    <button class="btn" id="btn-test-audio">🔊 Test Audio</button>
+                    <button class="btn" id="btn-test-ui">👁️ Test Alert UI</button>
+                </div>
+            </div>
+        </header>
 
-    <div id="ticket-modal">
-        <h1>🚨 NUOVA RICHIESTA ASSISTENZA 🚨</h1>
-        <h2 id="modal-ticket-title">Caricamento...</h2>
-        <div id="countdown-box">10</div>
-        <button class="btn-claim" onclick="prendiInCaricoAzione()">VAI AL TICKET</button>
-    </div>
+        <div id="error-banner">
+            <!-- Messaggio di errore inserito tramite JS -->
+        </div>
+
+        <section class="main-content">
+            <div class="log-panel">
+                <div class="log-header">
+                    <span>Log Ticket Presi in Carico (Operatore: <span id="op-name"
+                            style="color:var(--accent-orange)"></span>)</span>
+                    <span style="font-size:0.9rem; opacity:0.8; font-family:var(--font-mono)">Sessione Corrente
+                        Volatile</span>
+                </div>
+                <ul class="log-list" id="ticket-log">
+                    <div id="empty-log-msg"
+                        style="text-align:center; padding: 4rem 2rem; color: var(--text-muted); font-family: var(--font-mono); font-style: italic;">
+                        Sistema in ascolto. Nessun ticket elaborato nella sessione attuale.
+                    </div>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- ALERT VIEW -->
+    <aside id="alert-view">
+        <div class="alert-container">
+            <div class="alert-header">⚠️ NUOVO TICKET RILEVATO ⚠️</div>
+
+            <div class="ticket-details">
+                <strong>Cliente:</strong> <span id="alert-cliente">--</span>
+                <strong>Oggetto:</strong> <span id="alert-oggetto">--</span>
+                <strong>Timing ID:</strong> <span id="alert-id">--</span>
+                <strong>Apertura:</strong> <span id="alert-time">--</span>
+            </div>
+
+            <div class="action-area">
+                <button class="btn-take" id="btn-take-charge">Prendi in Carico</button>
+                <div
+                    style="font-family: var(--font-mono); color: rgba(255,255,255,0.5); font-size: 1.1rem; margin-top: 1rem;">
+                    URGENZA OPERATIVA! L'assegnazione è richiesta.
+                </div>
+                <div class="countdown-wrapper">
+                    <div class="countdown-bar" id="alert-countdown"></div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Socket.io Client -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <script>
-        // ==========================================
-        // CONFIGURAZIONE API NIOS4 
-        // ==========================================
-        const API_BASE_URL = "https://web.nios4.com/ws";
-        const TOKEN_NIOS4 = "e9b5ddc844acd1456416971d3145e2ca";
-        const DATABASE_ID = "dtec3701";
-        const TABLE_NOME = "ticket";
-        const AUDIO_URL = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+        /* =========================================================================
+                                     CONFIGURAZIONE
+           Tutte le variabili operative e di API sono configurabili qui.
+           Non è necessario modificare la logica sottostante.
+           ========================================================================= */
+        const CONFIG = {
+            // ---> IDENTIFICAZIONE OPERATORE (Tecnico Loggato al Dispatcher)
+            OPERATORE_ID: 'TEC-001',           // L'ID numerico/stringa del tecnico che lavora
+            OPERATORE_NOME: 'Tecnico Alpha',   // Nome da mostrare a video nel log
 
-        // Variabili di stato
-        let pollingInterval;
-        let countdownInterval;
-        let ticketCorrenteGguid = null;
-        let ticketGiaNotificati = []; // Memoria per non far suonare due volte lo stesso ticket
+            // ---> TIMING E POLLING
+            POLLING_INTERVAL_MS: 10000,        // Frequenza di interrogazione in millisecondi (default: 10.000ms = 10s)
 
-        const allarmeAudio = new Audio(AUDIO_URL);
-        allarmeAudio.loop = true;
+            // ---> ENDPOINT RICERCA TICKET (Metodo GET)
+            // L'API di Nios4 dovrà restituire un Array di oggetti Ticket JSON o { tickets: [...] }
+            API_URL_GET: 'http://localhost:3000/api/ticket',
+            API_METHOD_GET: 'GET',
 
-        // 1. Inizializzazione
-        function avviaDispatcher() {
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('listening-screen').style.display = 'block';
+            // ---> ENDPOINT PRESA IN CARICO TICKET (Metodo PATCH/PUT/POST)
+            // Il placeholder {GGUID} verrà sostituito automaticamente con il GGUID del ticket alertato
+            API_URL_UPDATE: 'https://api.nios4.com/v1/tickets/{GGUID}',
+            API_METHOD_UPDATE: 'PATCH',
 
-            // Sblocca le policy audio del browser
-            allarmeAudio.play().then(() => { allarmeAudio.pause(); }).catch(e => console.log(e));
+            // Payload inviato per notificare a Nios4 la presa in carico
+            API_PAYLOAD_UPDATE: {
+                stato: 'in_lavorazione'
+                // aggiunto programmaticamente sotto: assegnato_a: CONFIG.OPERATORE_ID
+            },
 
-            // Inizia il polling ogni 3 secondi
-            pollingInterval = setInterval(controllaNuoviTicket, 3000);
-            console.log("Dispatcher avviato.");
+            // ---> CREDENZIALI API NIOS4 (Basic Auth)
+            // Inserisci qui username e password. Verranno codificati in automatico.
+            API_USERNAME: 'il_tuo_username_qui',
+            API_PASSWORD: 'la_tua_password_qui',
+
+            // IMPORTANTE (CORS): Se Nios4 è ospitato su dominio diverso da origin, 
+            // le API target DEVONO esporre Access-Control-Allow-Origin per questo host in risposta!
+            API_HEADERS: {
+                'Content-Type': 'application/json'
+            },
+
+            // ---> BASE URL SCHEDA D-TEC (da aprire in nuova tab)
+            // Il GGUID verrà concatenato alla fine
+            D_TEC_URL_BASE: 'https://web.dtec.one/scheda/',
+
+            // ---> AMBIENTE DI TEST
+            // true  = Simula chiamate di rete ritornando ticket finti. (Per visualizzare senza API pronte)
+            // false = Effettua reai "fetch" verso l'infrastruttura specificata su API_URL_*
+            MOCK_MODE: false
+        };
+
+        // Generazione automatica dell'header Basic Auth se le credenziali sono fornite
+        if (CONFIG.API_USERNAME && CONFIG.API_PASSWORD) {
+            CONFIG.API_HEADERS['Authorization'] = 'Basic ' + btoa(CONFIG.API_USERNAME + ':' + CONFIG.API_PASSWORD);
         }
 
-        // 2. Controllo nuovi Ticket via API (Senza Headers per eludere il CORS preflight)
-        async function controllaNuoviTicket() {
-            try {
-                const response = await fetch(`http://localhost:3000/api/ticket`);
-                const data = await response.json();
-                
-                console.log("Risposta API:", JSON.stringify(data)); // <-- LOG CHIAVE
+        // Aggancio in auto l'ID Operatore configurato al payload di update
+        CONFIG.API_PAYLOAD_UPDATE.assegnato_a = CONFIG.OPERATORE_ID;
 
-                // Gestisci sia { records: [] } che array diretto []
-                const lista = data.records || data || [];
 
-                if (lista.length > 0) {
-                    const ticketNuovo = lista.find(t => !ticketGiaNotificati.includes(t.gguid));
-                    console.log("Ticket nuovo trovato:", ticketNuovo); // <-- LOG CHIAVE
+        /* =========================================================================
+           STATO GLOBALE E VARIABILI INTERNE
+           ========================================================================= */
+        const state = {
+            notifiedTickets: new Set(), // Traccia i GGUID già gestiti / scartati per evitare loop
+            pollTimer: null,            // Riferimento al setInterval del polling
+            currentAlertTicket: null,   // Tiene memoria del ticket correntemente a schermo rosso
+            isAlertActive: false,       // Flag che l'allarme sta suonando/bloccando polling
+            audioContext: null,         // Contenitore Web Audio API
+            alertBuffer: null,          // AudioBuffer caricato/generato
+            alertSource: null,          // AudioBufferSourceNode attivo
+            countdownAnimation: null,   // WAAPI Animation reference
+            socket: null                // Socket.io instance
+        };
 
-                    if (ticketNuovo && ticketCorrenteGguid === null) {
-                        mostraAllarme(ticketNuovo);
-                    }
+
+        /* =========================================================================
+           BINDING ELEMENTI DOM
+           ========================================================================= */
+        const DOM = {
+            bootScreen: document.getElementById('boot-screen'),
+            btnBoot: document.getElementById('btn-boot'),
+            standbyView: document.getElementById('standby-view'),
+            alertView: document.getElementById('alert-view'),
+            pollingDot: document.getElementById('polling-dot'),
+            lastPollTime: document.getElementById('last-poll-time'),
+            connStatus: document.getElementById('conn-status'),
+            connText: document.getElementById('conn-text'),
+            errorBanner: document.getElementById('error-banner'),
+            ticketLog: document.getElementById('ticket-log'),
+            emptyLogMsg: document.getElementById('empty-log-msg'),
+            opName: document.getElementById('op-name'),
+
+            // Elementi della vista Alert
+            alertCliente: document.getElementById('alert-cliente'),
+            alertOggetto: document.getElementById('alert-oggetto'),
+            alertId: document.getElementById('alert-id'),
+            alertTime: document.getElementById('alert-time'),
+            btnTakeCharge: document.getElementById('btn-take-charge'),
+            alertCountdown: document.getElementById('alert-countdown'),
+
+            // Bottoni Strumenti
+            btnTestAudio: document.getElementById('btn-test-audio'),
+            btnTestUi: document.getElementById('btn-test-ui')
+        };
+
+        DOM.opName.textContent = CONFIG.OPERATORE_NOME;
+
+
+        /* =========================================================================
+           SISTEMA GENERAZIONE AUDIO (Web Audio API) - Nessun file esterno!
+           Genera un pattern "beep beep beep" acuto stile interfono
+           ========================================================================= */
+        function initAudio() {
+            // Requisito dei browser moderni: L'AudioContext va creato o "resunto"
+            // solo dopo un'interazione utente (il "Test Audio" o un click sulla UI).
+            if (!state.audioContext) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                state.audioContext = new AudioCtx();
+            }
+            if (state.audioContext.state === 'suspended') {
+                state.audioContext.resume();
+            }
+
+            // Genera il buffer di allarme se non esiste
+            if (!state.alertBuffer) {
+                const sampleRate = state.audioContext.sampleRate;
+                const duration = 0.5; // 500ms
+                const buffer = state.audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < buffer.length; i++) {
+                    const t = i / sampleRate;
+                    // Pattern: Beep acuto (880Hz) con decadimento
+                    const sine = Math.sin(2 * Math.PI * 880 * t);
+                    const square = Math.sign(Math.sin(2 * Math.PI * 440 * t));
+                    const envelope = Math.exp(-6 * t); // Fade out rapido
+                    data[i] = (sine * 0.5 + square * 0.2) * envelope;
                 }
-            } catch (error) {
-                console.error("Errore di connessione:", error);
+                state.alertBuffer = buffer;
             }
         }
 
-        // 3. Mostra il Modale
-        function mostraAllarme(ticket) {
-            ticketCorrenteGguid = ticket.gguid;
+        function playAlertSound() {
+            initAudio();
+            
+            if (state.alertSource) return; // Già in riproduzione
 
-            // Lo aggiungiamo subito alla lista dei già visti
-            ticketGiaNotificati.push(ticket.gguid);
+            const source = state.audioContext.createBufferSource();
+            source.buffer = state.alertBuffer;
+            source.loop = true;
+            source.loopEnd = 0.5; 
 
-            // Suona!
-            allarmeAudio.play().catch(e => console.error("Audio bloccato:", e));
+            const gainNode = state.audioContext.createGain();
+            gainNode.gain.value = 0.4;
 
-            // Aggiorna interfaccia
-            const nomeCliente = ticket.cliente || "Sconosciuto";
-            const idTicket = ticket.id_ticket || "---";
-            document.getElementById('modal-ticket-title').innerText = `Ticket #${idTicket} - Cliente: ${nomeCliente}`;
-            document.getElementById('ticket-modal').style.display = 'flex';
+            source.connect(gainNode);
+            gainNode.connect(state.audioContext.destination);
 
-            let secondiRimasti = 10;
-            document.getElementById('countdown-box').innerText = secondiRimasti;
+            source.start(0);
+            state.alertSource = source;
+            state.isAlertActive = true;
+        }
 
-            clearInterval(countdownInterval);
-            countdownInterval = setInterval(() => {
-                secondiRimasti--;
-                document.getElementById('countdown-box').innerText = secondiRimasti;
+        function stopAlertSound() {
+            state.isAlertActive = false;
+            
+            if (state.alertSource) {
+                try {
+                    state.alertSource.stop();
+                    state.alertSource.disconnect();
+                } catch (e) { }
+                state.alertSource = null;
+            }
 
-                if (secondiRimasti <= 0) {
-                    chiudiModaleSilenziosamente(); // Scaduto il tempo, smette di suonare
+            // Ferma l'animazione countdown
+            if (state.countdownAnimation) {
+                state.countdownAnimation.cancel();
+                state.countdownAnimation = null;
+            }
+        }
+
+
+        /* =========================================================================
+           LOGICA DI RETE / INQUADRAMENTO REST API NIOS4
+           ========================================================================= */
+
+        /** Realizza GET alla ricerca di nuovi ticket */
+        async function fetchTicketsAPI() {
+            // MOCK MODE: per test disconnessi
+            if (CONFIG.MOCK_MODE) {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        // In mock mode, genero casualmente un ticket finto (con un po' di probabilità)
+                        if (Math.random() > 0.8 && !state.isAlertActive) {
+                            const mockId = 'GGUID-' + Math.floor(Math.random() * 900000 + 100000);
+                            resolve([{
+                                gguid: mockId,
+                                id_referenza: 'TCK-' + Math.floor(Math.random() * 9000 + 1000),
+                                cliente: ['Acme Corp S.p.A.', 'TechNova SRL', 'CyberLogistics SA', 'Immobiliare Orizzonte'][Math.floor(Math.random() * 4)],
+                                oggetto: ['Blocco server posta', 'Stampante guasta ufficio', 'Installazione VPN', 'Recupero dati da NAS rotto'][Math.floor(Math.random() * 4)],
+                                data_apertura: new Date().toLocaleTimeString()
+                            }]);
+                        } else {
+                            resolve([]); // Nessun ticket trovato in questo giro
+                        }
+                    }, 600);
+                });
+            }
+
+            // TRUE API MODE
+            const response = await fetch(CONFIG.API_URL_GET, {
+                method: CONFIG.API_METHOD_GET,
+                headers: CONFIG.API_HEADERS
+            });
+
+            if (!response.ok) {
+                throw new Error(`Errore Server: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            // Assicuriamoci di estrarre un array, alcuni framework wrappano i dati sotto un field, 
+            // e.g., { meta:..., data: [...] } => qui consideriamo data in array base oppure mappato.
+            return Array.isArray(data) ? data : (data.tickets || data.data || []);
+        }
+
+        /** Realizza PATCH per l'aggiornamento e la presa in carico del tecnico */
+        async function updateTicketToNios4(gguid) {
+            if (CONFIG.MOCK_MODE) return Promise.resolve(true);
+
+            const url = CONFIG.API_URL_UPDATE.replace('{GGUID}', encodeURIComponent(gguid));
+            try {
+                const response = await fetch(url, {
+                    method: CONFIG.API_METHOD_UPDATE,
+                    headers: CONFIG.API_HEADERS,
+                    body: JSON.stringify(CONFIG.API_PAYLOAD_UPDATE)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error("Errore fatale aggiornamento Nios4:", error);
+                return false;
+            }
+        }
+
+
+        /* =========================================================================
+           UI UPDATES E FLUSSO PRINCIPALE
+           ========================================================================= */
+
+        /** Aggiorna visivamente il bannerino connettività nel panel standby */
+        function updateConnectionUI(isOk, message = '') {
+            if (isOk) {
+                DOM.connStatus.style.borderColor = 'var(--border-color)';
+                DOM.pollingDot.classList.remove('error');
+                DOM.connText.textContent = "Connessione API OK";
+                DOM.connText.style.color = "var(--text-main)";
+                DOM.errorBanner.style.display = 'none';
+            } else {
+                DOM.connStatus.style.borderColor = 'var(--alert-red)';
+                DOM.pollingDot.classList.add('error');
+                DOM.connText.textContent = "API Error";
+                DOM.connText.style.color = "var(--alert-red)";
+                DOM.errorBanner.textContent = `Avviso: Fallita comunicazione API (${message}). Ritaglio automatico al prossimo polling.`;
+                DOM.errorBanner.style.display = 'block';
+            }
+            DOM.lastPollTime.textContent = new Date().toLocaleTimeString();
+        }
+
+        /** Logga a video in standby i ticket già gestiti */
+        function appendTicketToLog(ticket) {
+            if (DOM.emptyLogMsg) DOM.emptyLogMsg.remove();
+
+            const li = document.createElement('li');
+            li.className = 'log-item';
+
+            const time = new Date().toLocaleTimeString();
+            const urlDTEC = CONFIG.D_TEC_URL_BASE + encodeURIComponent(ticket.gguid);
+
+            li.innerHTML = `
+                <span class="time">${time}</span>
+                <span class="id">${ticket.id_referenza || ticket.gguid}</span>
+                <span class="desc" title="${ticket.cliente} - ${ticket.oggetto}">${ticket.cliente} - ${ticket.oggetto}</span>
+                <a href="${urlDTEC}" target="_blank" class="link">D-TEC ↗</a>
+            `;
+
+            // Mette gli ultimi sopra
+            DOM.ticketLog.prepend(li);
+        }
+
+        /** Lancia la trasformazione della pagina in Alert Rosso */
+        function triggerAlertSequence(ticket) {
+            state.isAlertActive = true;
+            state.currentAlertTicket = ticket;
+
+            // 1. Popola Dati UI
+            DOM.alertCliente.textContent = ticket.cliente || 'Sconosciuto';
+            DOM.alertOggetto.textContent = ticket.oggetto || 'Senza Oggetto';
+            DOM.alertId.textContent = ticket.id_referenza || ticket.gguid;
+            DOM.alertTime.textContent = ticket.data_apertura || new Date().toLocaleTimeString();
+
+            // 2. Mostra Banner Fulllscreen
+            DOM.alertView.classList.add('active');
+
+            // 3. Riproduci Audio
+            playAlertSound();
+
+            // 4. Anima la Countdown Bar tramite WAAPI
+            if (state.countdownAnimation) {
+                state.countdownAnimation.cancel();
+            }
+
+            state.countdownAnimation = DOM.alertCountdown.animate([
+                { transform: 'scaleX(1)' },
+                { transform: 'scaleX(0)' }
+            ], {
+                duration: 60000, // 60 secondi come richiesto dai requisiti
+                fill: 'forwards',
+                easing: 'linear'
+            });
+        }
+
+        /** Cuore dell'applicazione: interrogazione ciclica periodica (polling) */
+        async function runPollingCycle() {
+            // Se in questo istante il tecnico sta visualizzando l'alert rosso, non facciamo poll incrociati
+            if (state.isAlertActive) return;
+
+            DOM.pollingDot.classList.add('polling');
+
+            try {
+                // Fetch API
+                const tickets = await fetchTicketsAPI();
+                updateConnectionUI(true);
+
+                // Filro i ticket in arrivo escludendo quelli già gestiti/conosciuti nella sessione
+                const newTickets = tickets.filter(t => !state.notifiedTickets.has(t.gguid));
+
+                if (newTickets.length > 0) {
+                    // C'è almeno un nuovo ticket non processato. Mostriamo il primo
+                    triggerAlertSequence(newTickets[0]);
                 }
-            }, 1000);
+
+            } catch (err) {
+                console.error("[Dispatcher] Polling error:", err);
+                updateConnectionUI(false, err.message);
+            } finally {
+                // Togli l'animazione di polling dopo circa 1s (solo per feedback visivo)
+                setTimeout(() => DOM.pollingDot.classList.remove('polling'), 1000);
+            }
         }
 
-        // 4. Azione "Prendi in Carico / Vai al Ticket"
-        function prendiInCaricoAzione() {
-            const gguidDaAprire = ticketCorrenteGguid;
-            chiudiModaleSilenziosamente();
+        /** Funzione triggerata dal click su "PRENDI IN CARICO" */
+        async function handleTakeChargeAction() {
+            const ticket = state.currentAlertTicket;
+            if (!ticket) return;
 
-            // Apre semplicemente la scheda su D-TEC (lasciando l'operatore libero di modificarla)
-            window.open(`https://web.dtec.one/scheda/${gguidDaAprire}`, '_blank');
+            // 1. Spegni audio e chiudi banner immediatamente per rimuovere l'ansia all'operatore
+            stopAlertSound();
+            DOM.alertView.classList.remove('active');
+
+            // 2. Comunicazione API Nios4 presa in carico (disattivata in mock mode)
+            const wasSuccessful = await updateTicketToNios4(ticket.gguid);
+
+            if (!wasSuccessful && !CONFIG.MOCK_MODE) {
+                alert(`⚠️ Attenzione: La presa in carico API verso Nios4 è fallita! Apriremo comunque D-TEC per ispezionare il ticket.`);
+            }
+
+            // --- SYNC SOCKET.IO ---
+            if (state.socket) {
+                state.socket.emit('ticket-acknowledged', {
+                    gguid: ticket.gguid,
+                    operatoreId: CONFIG.OPERATORE_ID,
+                    operatoreNome: CONFIG.OPERATORE_NOME,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            // 3. Segna come notificato/gestito a livello logico (anti-duplicate-alert per la sessione)
+            state.notifiedTickets.add(ticket.gguid);
+
+            // 4. Salva sul riepilogo a video
+            appendTicketToLog(ticket);
+
+            // 5. APRI D-TEC IN NUOVA SCHEDA BROWSER (il window.open funzionerà poichè causato da un click utente, non verrà bloccato dal popup blocker)
+            const dtecUrl = CONFIG.D_TEC_URL_BASE + encodeURIComponent(ticket.gguid);
+            window.open(dtecUrl, '_blank');
+
+            // 6. Pulizia stato
+            state.currentAlertTicket = null;
+
+            // 7. Forzo un riavvio immediato del ciclo per intercettare eventuali altri ticket senza aspettare l'intervallo
+            runPollingCycle();
         }
 
-        // 5. Funzione di chiusura
-        function chiudiModaleSilenziosamente() {
-            clearInterval(countdownInterval);
-            allarmeAudio.pause();
-            allarmeAudio.currentTime = 0;
-            document.getElementById('ticket-modal').style.display = 'none';
-            ticketCorrenteGguid = null; // Sblocca il sistema per futuri allarmi
+
+        /* =========================================================================
+           BOOT E BINDING EVENTI
+           ========================================================================= */
+        function bootDispatcher() {
+            // --- INIZIALIZZAZIONE SOCKET.IO ---
+            state.socket = io('http://localhost:3000');
+
+            state.socket.on('connect', () => {
+                console.log('[Socket.io] Connesso al server');
+                DOM.connText.textContent = "Socket.io Connesso";
+                DOM.pollingDot.classList.add('polling');
+            });
+
+            state.socket.on('new-ticket', (ticket) => {
+                console.log('[Socket.io] Ricevuto nuovo ticket:', ticket);
+                triggerAlertSequence(ticket);
+            });
+
+            state.socket.on('ticket-remote-ack', (data) => {
+                console.log('[Socket.io] Ticket preso in carico remotamente:', data);
+                if (state.currentAlertTicket && state.currentAlertTicket.gguid === data.gguid) {
+                    stopAlertSound();
+                    DOM.alertView.classList.remove('active');
+                    state.notifiedTickets.add(data.gguid);
+                    state.currentAlertTicket = null;
+                    console.log(`Alert rimosso: Ticket ${data.gguid} gestito da ${data.operatoreNome}`);
+                }
+            });
+
+            state.socket.on('disconnect', () => {
+                console.log('[Socket.io] Disconnesso dal server');
+                DOM.connText.textContent = "Socket.io Disconnesso";
+                DOM.pollingDot.classList.add('error');
+            });
+
+            // Binding Button "Prendi in Carico"
+            DOM.btnTakeCharge.addEventListener('click', handleTakeChargeAction);
+
+            // Binding utilities Audio Test / UI Test
+            DOM.btnTestAudio.addEventListener('click', () => {
+                initAudio();
+                state.isAlertActive = true;
+                playAlertSound();
+                // Ferma il test da solo dopo 2.5sec
+                setTimeout(() => stopAlertSound(), 2500);
+            });
+
+            DOM.btnTestUi.addEventListener('click', () => {
+                triggerAlertSequence({
+                    gguid: 'TEST_UI_GGUID_' + Date.now(),
+                    id_referenza: 'TCK-DEMO',
+                    cliente: 'Azienda Demo SPA',
+                    oggetto: 'Simulazione di alert in tempo reale',
+                    data_apertura: new Date().toLocaleTimeString()
+                });
+            });
+
+            // Start primo giro immediato (dopo 1ms event loop)
+            setTimeout(runPollingCycle, 1);
+
+            // Schedulazione Polling Ciclico (Heartbeat)
+            state.pollTimer = setInterval(runPollingCycle, CONFIG.POLLING_INTERVAL_MS);
+
+            console.log(`[Dispatcher] Avviato con successo. Polling interval: ${CONFIG.POLLING_INTERVAL_MS}ms. Mock Mode: ${CONFIG.MOCK_MODE}`);
         }
+
+        // Avvio applicazione sul caricamento del DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            DOM.btnBoot.addEventListener('click', () => {
+                initAudio();
+                DOM.bootScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    DOM.bootScreen.classList.add('hidden');
+                    bootDispatcher();
+                }, 800);
+            });
+        });
+
     </script>
+
 </body>
 
 </html>

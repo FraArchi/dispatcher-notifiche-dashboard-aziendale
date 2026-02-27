@@ -4,6 +4,7 @@ const cors = require('cors');
 const axios = require('axios');
 const http = require('http');
 const { Server } = require('socket.io');
+const Nios4Client = require('./Nios4Client');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +18,13 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const NIOS4_TOKEN = process.env.NIOS4_TOKEN;
 const NIOS4_DB = process.env.NIOS4_DB;
+
+// Inizializza il client Nios4
+const nios4 = new Nios4Client({
+    baseUrl: 'https://web.nios4.com/ws',
+    database: NIOS4_DB,
+    token: NIOS4_TOKEN
+});
 
 app.use(cors({
     origin: "*",
@@ -55,27 +63,20 @@ app.post('/webhook/new-ticket', (req, res) => {
 // Endpoint proxy per polling manuale (fallback)
 app.get('/api/ticket', async (req, res) => {
     try {
-        const niosUrl = `https://web.nios4.com/ws/model?database=${NIOS4_DB}&table=ticket&filter=stato%3D%27Aperto%27`;
-        console.log(`Tentativo di chiamata a Nios4: ${niosUrl}`);
+        console.log(`Tentativo di recupero ticket da Nios4 tramite SDK...`);
+        const records = await nios4.find_records('ticket', "stato='Aperto'");
         
-        const response = await axios.get(niosUrl, {
-            headers: {
-                'Authorization': `Bearer ${NIOS4_TOKEN}`
-            },
-            timeout: 5000 // Aggiungiamo un timeout per evitare attese infinite
-        });
-        
-        console.log(`Risposta da Nios4: ${response.status} - Data count: ${Array.isArray(response.data) ? response.data.length : 'N/A'}`);
-        res.json(response.data);
+        console.log(`Risposta da Nios4 via SDK: SUCCESS - Data count: ${Array.isArray(records) ? records.length : 'N/A'}`);
+        res.json(records);
     } catch (error) {
-        console.error("Errore Proxy dettagliato:");
+        console.error("Errore SDK Nios4 dettagliato:");
         if (error.response) {
             console.error(`- Status: ${error.response.status}`);
             console.error(`- Data: ${JSON.stringify(error.response.data)}`);
         } else {
             console.error(`- Message: ${error.message}`);
         }
-        res.status(500).json({ error: 'Errore di connessione a Nios4', detail: error.message });
+        res.status(500).json({ error: 'Errore di connessione a Nios4 via SDK', detail: error.message });
     }
 });
 

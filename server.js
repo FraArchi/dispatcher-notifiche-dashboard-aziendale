@@ -18,7 +18,21 @@ const PORT = process.env.PORT || 3000;
 const NIOS4_TOKEN = process.env.NIOS4_TOKEN;
 const NIOS4_DB = process.env.NIOS4_DB;
 
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Access-Control-Allow-Private-Network"]
+}));
+
+// Middleware per abilitare Private Network Access (Chrome requirement for HTTPS -> Localhost)
+app.use((req, res, next) => {
+    if (req.headers['access-control-request-private-network']) {
+        res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    next();
+});
+
 app.use(express.json());
 
 // Middleware for logging
@@ -42,15 +56,26 @@ app.post('/webhook/new-ticket', (req, res) => {
 app.get('/api/ticket', async (req, res) => {
     try {
         const niosUrl = `https://web.nios4.com/ws/model?database=${NIOS4_DB}&table=ticket&filter=stato%3D%27Aperto%27`;
+        console.log(`Tentativo di chiamata a Nios4: ${niosUrl}`);
+        
         const response = await axios.get(niosUrl, {
             headers: {
                 'Authorization': `Bearer ${NIOS4_TOKEN}`
-            }
+            },
+            timeout: 5000 // Aggiungiamo un timeout per evitare attese infinite
         });
+        
+        console.log(`Risposta da Nios4: ${response.status} - Data count: ${Array.isArray(response.data) ? response.data.length : 'N/A'}`);
         res.json(response.data);
     } catch (error) {
-        console.error("Errore Proxy:", error.message);
-        res.status(500).json({ error: 'Errore di connessione a Nios4' });
+        console.error("Errore Proxy dettagliato:");
+        if (error.response) {
+            console.error(`- Status: ${error.response.status}`);
+            console.error(`- Data: ${JSON.stringify(error.response.data)}`);
+        } else {
+            console.error(`- Message: ${error.message}`);
+        }
+        res.status(500).json({ error: 'Errore di connessione a Nios4', detail: error.message });
     }
 });
 

@@ -9,8 +9,14 @@
 ## Phase 2: Blocking UI & Multimedia
 **Requirements:** [FR-3, FR-4, FR-5, FR-6]
 **Plans:** 2 plans
-- [ ] 02-01-PLAN.md — Enhanced UI (Portal-style) and WAAPI countdown.
-- [ ] 02-02-PLAN.md — Gapless AudioBuffer alarm and acknowledgment logic.
+- [x] 02-01-PLAN.md — Enhanced UI (Portal-style) and WAAPI countdown.
+- [x] 02-02-PLAN.md — Gapless AudioBuffer alarm and acknowledgment logic.
+
+## Phase 2.1: Nios4 Node.js SDK Implementation
+**Requirements:** [FR-1, FR-2]
+**Plans:** 2 plans
+- [ ] 02.1-01-PLAN.md — SDK Foundation (Utility + Client Class).
+- [ ] 02.1-02-PLAN.md — Server Integration & Verification.
 
 ## Phase 3: Nios4 Integration
 - [ ] Configure Nios4 API credentials (via .env).

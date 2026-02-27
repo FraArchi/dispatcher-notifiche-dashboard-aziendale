@@ -1,0 +1,12 @@
+{
+  "workflow": "gsd",
+  "version": "1.0",
+  "auto_research": true,
+  "git_integration": true,
+  "notification_style": "blocking",
+  "tech_stack": {
+    "backend": "nodejs",
+    "frontend": "vanilla-js",
+    "realtime": "socket.io"
+  }
+}

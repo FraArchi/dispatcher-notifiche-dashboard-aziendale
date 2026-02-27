@@ -21,8 +21,9 @@
             --text-muted: #798d9f;
             --accent-green: #00ff88;
             --accent-orange: #ff9900;
-            --alert-red: #e62e2e;
-            --alert-dark: #660000;
+            --alert-red: #ff003c;
+            --alert-red-glow: rgba(255, 0, 60, 0.5);
+            --alert-dark: #2a000a;
 
             --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
             --font-sans: 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
@@ -39,11 +40,65 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: var(--font-base);
-            height: 100vh;
+            height: 100dvh;
             overflow: hidden;
             /* No scroll, dashboard fissa */
             display: flex;
             flex-direction: column;
+        }
+
+        /* =========================================================================
+           BOOT SCREEN (Audio Unlock)
+           ========================================================================= */
+        #boot-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            text-align: center;
+        }
+
+        #boot-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .boot-logo {
+            font-family: var(--font-sans);
+            font-size: 4rem;
+            letter-spacing: 5px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .boot-logo span {
+            color: var(--accent-orange);
+        }
+
+        .btn-boot {
+            background: transparent;
+            color: var(--accent-green);
+            border: 2px solid var(--accent-green);
+            padding: 1rem 3rem;
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 0 15px var(--accent-green);
+            transition: all 0.3s;
+        }
+
+        .btn-boot:hover {
+            background: var(--accent-green);
+            color: var(--bg-color);
+            box-shadow: 0 0 30px var(--accent-green);
         }
 
         /* =========================================================================
@@ -279,16 +334,12 @@
            ========================================================================= */
         #alert-view {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: var(--alert-red);
-            background-image: repeating-linear-gradient(45deg,
-                    transparent,
-                    transparent 40px,
-                    rgba(0, 0, 0, 0.1) 40px,
-                    rgba(0, 0, 0, 0.1) 80px);
+            inset: 0;
+            height: 100dvh;
+            background-color: var(--alert-dark);
+            background-image: 
+                radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255, 0, 60, 0.05) 40px, rgba(255, 0, 60, 0.05) 80px);
             color: white;
             display: flex;
             flex-direction: column;
@@ -297,62 +348,58 @@
             z-index: 9999;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.15s ease-in;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             padding: 2rem;
         }
 
         #alert-view.active {
             opacity: 1;
             pointer-events: all;
-            animation: bg-flash 2.5s infinite;
+            animation: alert-pulse-bg 2s infinite ease-in-out;
         }
 
-        @keyframes bg-flash {
-            0% {
-                background-color: var(--alert-red);
-            }
-
-            50% {
-                background-color: var(--alert-dark);
-            }
-
-            100% {
-                background-color: var(--alert-red);
-            }
+        @keyframes alert-pulse-bg {
+            0% { background-color: var(--alert-dark); }
+            50% { background-color: #450010; }
+            100% { background-color: var(--alert-dark); }
         }
 
         .alert-container {
-            background: rgba(10, 15, 20, 0.95);
-            padding: 4rem;
-            border-radius: 8px;
-            max-width: 1000px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: clamp(1rem, 5vw, 4rem);
+            border-radius: 4px;
+            max-width: 1200px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 0 100px rgba(0, 0, 0, 0.9), 0 0 0 4px var(--alert-red);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.9), 0 0 20px var(--alert-red-glow);
+            border: 2px solid var(--alert-red);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-container::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: var(--alert-red);
+            box-shadow: 0 0 15px var(--alert-red);
         }
 
         .alert-header {
             font-family: var(--font-sans);
-            font-size: 4rem;
+            font-size: clamp(2rem, 8vw, 5rem);
             text-transform: uppercase;
-            letter-spacing: 4px;
+            letter-spacing: 8px;
             margin-bottom: 2rem;
-            color: #ffffff;
-            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
-            animation: text-pulse 1s infinite alternate;
+            color: var(--alert-red);
+            text-shadow: 0 0 30px var(--alert-red-glow);
+            animation: alert-text-flicker 1.5s infinite;
         }
 
-        @keyframes text-pulse {
-            from {
-                opacity: 0.8;
-                transform: scale(0.98);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1.02);
-            }
+        @keyframes alert-text-flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            52% { opacity: 1; }
         }
 
         .ticket-details {
@@ -360,78 +407,86 @@
             text-align: left;
             margin: 2rem 0;
             padding: 2rem;
-            background: rgba(0, 0, 0, 0.4);
-            border-left: 6px solid var(--alert-red);
-            font-size: 1.4rem;
-            line-height: 1.8;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            background: rgba(255, 0, 60, 0.05);
+            border-left: 4px solid var(--alert-red);
+            font-size: clamp(1rem, 2.5vw, 1.6rem);
+            line-height: 1.6;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem 2rem;
         }
 
         .ticket-details strong {
             color: var(--accent-orange);
-            display: inline-block;
-            width: 150px;
+            text-transform: uppercase;
+            opacity: 0.8;
         }
 
         .action-area {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1.5rem;
-            margin-top: 3rem;
+            gap: 2rem;
+            margin-top: 2rem;
         }
 
         .btn-take {
             background: var(--alert-red);
             color: white;
-            border: 3px solid white;
-            padding: 1.5rem 5rem;
+            border: none;
+            padding: 1.5rem 4rem;
             font-family: var(--font-sans);
-            font-size: 2.5rem;
+            font-size: clamp(1.5rem, 5vw, 3rem);
             text-transform: uppercase;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 6px;
-            transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
-            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.4);
+            transition: all 0.2s;
+            box-shadow: 0 0 20px var(--alert-red-glow);
+            letter-spacing: 2px;
         }
 
         .btn-take:hover {
-            transform: translateY(-5px) scale(1.05);
             background: white;
             color: var(--alert-red);
-            box-shadow: 0 15px 40px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 40px white;
+            transform: scale(1.05);
         }
 
         .btn-take:active {
-            transform: translateY(2px) scale(0.98);
+            transform: scale(0.95);
         }
 
         /* Countdown Visual */
         .countdown-wrapper {
             position: relative;
-            width: 80%;
-            height: 12px;
+            width: 100%;
+            height: 8px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .countdown-bar {
             height: 100%;
             width: 100%;
-            background: linear-gradient(90deg, var(--accent-orange), var(--alert-red));
+            background: var(--alert-red);
+            box-shadow: 0 0 10px var(--alert-red);
             transform-origin: left;
-            transition: width 10s linear;
-            /* Default transizione gestita in JS */
+            /* Will be animated via WAAPI */
         }
     </style>
 </head>
 
 <body>
+
+    <!-- BOOT SCREEN -->
+    <div id="boot-screen">
+        <div class="boot-logo">D-TEC <span>Dispatcher</span></div>
+        <button class="btn-boot" id="btn-boot">Initialize System</button>
+        <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.9rem;">
+            Awaiting user interaction to unlock audio engine...
+        </div>
+    </div>
 
     <!-- STANDBY VIEW -->
     <main id="standby-view">
@@ -481,10 +536,10 @@
             <div class="alert-header">⚠️ NUOVO TICKET RILEVATO ⚠️</div>
 
             <div class="ticket-details">
-                <div><strong>CLIENTE:</strong> <span id="alert-cliente">--</span></div>
-                <div><strong>OGGETTO:</strong> <span id="alert-oggetto">--</span></div>
-                <div><strong>ID TIMING:</strong> <span id="alert-id">--</span></div>
-                <div><strong>APERTURA:</strong> <span id="alert-time">--</span></div>
+                <strong>Cliente:</strong> <span id="alert-cliente">--</span>
+                <strong>Oggetto:</strong> <span id="alert-oggetto">--</span>
+                <strong>Timing ID:</strong> <span id="alert-id">--</span>
+                <strong>Apertura:</strong> <span id="alert-time">--</span>
             </div>
 
             <div class="action-area">
@@ -499,6 +554,9 @@
             </div>
         </div>
     </aside>
+
+    <!-- Socket.io Client -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <script>
         /* =========================================================================
@@ -516,7 +574,7 @@
 
             // ---> ENDPOINT RICERCA TICKET (Metodo GET)
             // L'API di Nios4 dovrà restituire un Array di oggetti Ticket JSON o { tickets: [...] }
-            API_URL_GET: 'https://api.nios4.com/v1/tickets?stato=aperto&assegnatario=null',
+            API_URL_GET: 'http://localhost:3000/api/ticket',
             API_METHOD_GET: 'GET',
 
             // ---> ENDPOINT PRESA IN CARICO TICKET (Metodo PATCH/PUT/POST)
@@ -569,7 +627,10 @@
             currentAlertTicket: null,   // Tiene memoria del ticket correntemente a schermo rosso
             isAlertActive: false,       // Flag che l'allarme sta suonando/bloccando polling
             audioContext: null,         // Contenitore Web Audio API
-            audioOscillators: []        // Array di nodi audio per permetterne l'arresto
+            alertBuffer: null,          // AudioBuffer caricato/generato
+            alertSource: null,          // AudioBufferSourceNode attivo
+            countdownAnimation: null,   // WAAPI Animation reference
+            socket: null                // Socket.io instance
         };
 
 
@@ -577,6 +638,8 @@
            BINDING ELEMENTI DOM
            ========================================================================= */
         const DOM = {
+            bootScreen: document.getElementById('boot-screen'),
+            btnBoot: document.getElementById('btn-boot'),
             standbyView: document.getElementById('standby-view'),
             alertView: document.getElementById('alert-view'),
             pollingDot: document.getElementById('polling-dot'),
@@ -618,59 +681,63 @@
             if (state.audioContext.state === 'suspended') {
                 state.audioContext.resume();
             }
+
+            // Genera il buffer di allarme se non esiste
+            if (!state.alertBuffer) {
+                const sampleRate = state.audioContext.sampleRate;
+                const duration = 0.5; // 500ms
+                const buffer = state.audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < buffer.length; i++) {
+                    const t = i / sampleRate;
+                    // Pattern: Beep acuto (880Hz) con decadimento
+                    const sine = Math.sin(2 * Math.PI * 880 * t);
+                    const square = Math.sign(Math.sin(2 * Math.PI * 440 * t));
+                    const envelope = Math.exp(-6 * t); // Fade out rapido
+                    data[i] = (sine * 0.5 + square * 0.2) * envelope;
+                }
+                state.alertBuffer = buffer;
+            }
         }
 
         function playAlertSound() {
             initAudio();
-            const ctx = state.audioContext;
+            
+            if (state.alertSource) return; // Già in riproduzione
 
-            // Helper function per generare un singolo "beep"
-            const playBeep = (startTime) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+            const source = state.audioContext.createBufferSource();
+            source.buffer = state.alertBuffer;
+            source.loop = true;
+            source.loopEnd = 0.5; 
 
-                osc.type = 'square'; // Forma d'onda pungente
-                // Glissando leggero di frequenza 
-                osc.frequency.setValueAtTime(880, startTime);
-                osc.frequency.setValueAtTime(1100, startTime + 0.1);
+            const gainNode = state.audioContext.createGain();
+            gainNode.gain.value = 0.4;
 
-                // Envelope volume per evitare "click" brutti a inizio/fine suono
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
-                gain.gain.linearRampToValueAtTime(0, startTime + 0.15); // Fade out rapido
+            source.connect(gainNode);
+            gainNode.connect(state.audioContext.destination);
 
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(startTime);
-                osc.stop(startTime + 0.2);
-
-                state.audioOscillators.push(osc);
-            };
-
-            // Loop ricorsivo: Genera 3 beep in successione, poi aspetta e ripete
-            const schedulePattern = () => {
-                // Interrompe il loop se lo stato d'allarme è rientrato
-                if (!state.isAlertActive) return;
-
-                const ct = ctx.currentTime;
-                playBeep(ct);             // Beep 1
-                playBeep(ct + 0.2);       // Beep 2
-                playBeep(ct + 0.4);       // Beep 3
-
-                setTimeout(schedulePattern, 1800); // Ripete la sequenza dopo 1.8s
-            };
-
-            schedulePattern();
+            source.start(0);
+            state.alertSource = source;
+            state.isAlertActive = true;
         }
 
         function stopAlertSound() {
-            // Abbattiamo l'allarme e zittiamo forzatamente vecchi oscillatori attivi
             state.isAlertActive = false;
-            state.audioOscillators.forEach(osc => {
-                try { osc.stop(); } catch (e) { }
-            });
-            state.audioOscillators = [];
+            
+            if (state.alertSource) {
+                try {
+                    state.alertSource.stop();
+                    state.alertSource.disconnect();
+                } catch (e) { }
+                state.alertSource = null;
+            }
+
+            // Ferma l'animazione countdown
+            if (state.countdownAnimation) {
+                state.countdownAnimation.cancel();
+                state.countdownAnimation = null;
+            }
         }
 
 
@@ -797,15 +864,19 @@
             // 3. Riproduci Audio
             playAlertSound();
 
-            // 4. Anima la Countdown Bar (Visivo per comunicare urgenza, senza chiudere la dialog da solo)
-            DOM.alertCountdown.style.transition = 'none';
-            DOM.alertCountdown.style.width = '100%';
+            // 4. Anima la Countdown Bar tramite WAAPI
+            if (state.countdownAnimation) {
+                state.countdownAnimation.cancel();
+            }
 
-            // Lascia al browser il tempo di applicare il reset, poi lancia la transizione di decrescità
-            setTimeout(() => {
-                DOM.alertCountdown.style.transition = 'width 10s linear';
-                DOM.alertCountdown.style.width = '0%';
-            }, 50);
+            state.countdownAnimation = DOM.alertCountdown.animate([
+                { transform: 'scaleX(1)' },
+                { transform: 'scaleX(0)' }
+            ], {
+                duration: 60000, // 60 secondi come richiesto dai requisiti
+                fill: 'forwards',
+                easing: 'linear'
+            });
         }
 
         /** Cuore dell'applicazione: interrogazione ciclica periodica (polling) */
@@ -853,6 +924,16 @@
                 alert(`⚠️ Attenzione: La presa in carico API verso Nios4 è fallita! Apriremo comunque D-TEC per ispezionare il ticket.`);
             }
 
+            // --- SYNC SOCKET.IO ---
+            if (state.socket) {
+                state.socket.emit('ticket-acknowledged', {
+                    gguid: ticket.gguid,
+                    operatoreId: CONFIG.OPERATORE_ID,
+                    operatoreNome: CONFIG.OPERATORE_NOME,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
             // 3. Segna come notificato/gestito a livello logico (anti-duplicate-alert per la sessione)
             state.notifiedTickets.add(ticket.gguid);
 
@@ -875,6 +956,45 @@
            BOOT E BINDING EVENTI
            ========================================================================= */
         function bootDispatcher() {
+            // --- INIZIALIZZAZIONE SOCKET.IO ---
+            state.socket = io('http://localhost:3000');
+
+            state.socket.on('connect', () => {
+                console.log('[Socket.io] Connesso al server');
+                DOM.connText.textContent = "Socket.io Connesso";
+                DOM.pollingDot.classList.add('polling');
+            });
+
+            state.socket.on('new-ticket', (ticket) => {
+                console.log('[Socket.io] Ricevuto nuovo ticket:', ticket);
+                // Mappa i dati del webhook nel formato atteso dalla UI
+                const mappedTicket = {
+                    gguid: ticket.gguid || ticket.id || Date.now(),
+                    id_referenza: ticket.id_referenza || ticket.codice || 'N/A',
+                    cliente: ticket.cliente || 'Nuovo Cliente',
+                    oggetto: ticket.oggetto || 'Nuovo Ticket',
+                    data_apertura: ticket.data_apertura || new Date().toLocaleTimeString()
+                };
+                triggerAlertSequence(mappedTicket);
+            });
+
+            state.socket.on('ticket-remote-ack', (data) => {
+                console.log('[Socket.io] Ticket preso in carico remotamente:', data);
+                if (state.currentAlertTicket && state.currentAlertTicket.gguid === data.gguid) {
+                    stopAlertSound();
+                    DOM.alertView.classList.remove('active');
+                    state.notifiedTickets.add(data.gguid);
+                    state.currentAlertTicket = null;
+                    console.log(`Alert rimosso: Ticket ${data.gguid} gestito da ${data.operatoreNome}`);
+                }
+            });
+
+            state.socket.on('disconnect', () => {
+                console.log('[Socket.io] Disconnesso dal server');
+                DOM.connText.textContent = "Socket.io Disconnesso";
+                DOM.pollingDot.classList.add('error');
+            });
+
             // Binding Button "Prendi in Carico"
             DOM.btnTakeCharge.addEventListener('click', handleTakeChargeAction);
 
@@ -907,7 +1027,16 @@
         }
 
         // Avvio applicazione sul caricamento del DOM
-        document.addEventListener('DOMContentLoaded', bootDispatcher);
+        document.addEventListener('DOMContentLoaded', () => {
+            DOM.btnBoot.addEventListener('click', () => {
+                initAudio();
+                DOM.bootScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    DOM.bootScreen.classList.add('hidden');
+                    bootDispatcher();
+                }, 800);
+            });
+        });
 
     </script>
 
